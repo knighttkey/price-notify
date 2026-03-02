@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Monitor Mobile Admin</title>
+    <style>
+      :root {
+        --primary: #6366f1;
+        --bg: #0f172a;
+        --card: rgba(30, 41, 59, 0.9);
+        --text: #f8fafc;
+        --accent: #22d3ee;
+      }
+
+      body {
+        font-family: -apple-system, system-ui, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .container {
+        max-width: 500px;
+        width: 100%;
+        background: var(--card);
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      h1 {
+        font-size: 1.25rem;
+        text-align: center;
+        background: linear-gradient(to right, var(--primary), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1.5rem;
+      }
+
+      .section {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        margin-bottom: 0.3rem;
+      }
+      input,
+      textarea {
+        width: 100%;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 0.7rem;
+        color: white;
+        font-size: 0.9rem;
+        box-sizing: border-box;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 1rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        margin-top: 1rem;
+        cursor: pointer;
+      }
+
+      .step-card {
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px dashed var(--primary);
+        padding: 1rem;
+        border-radius: 12px;
+        margin-top: 1.5rem;
+        font-size: 0.85rem;
+        display: none;
+      }
+
+      code {
+        background: #000;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Mobile Settings Admin</h1>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem">
+        <div class="section">
+          <label>入住</label>
+          <input type="date" id="checkin" value="2026-03-14" />
+        </div>
+        <div class="section">
+          <label>退房</label>
+          <input type="date" id="checkout" value="2026-03-15" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem">
+        <div class="section">
+          <label>預算 (TWD)</label>
+          <input type="number" id="maxPrice" value="2800" />
+        </div>
+        <div class="section">
+          <label>最低星級</label>
+          <input type="number" step="0.1" id="minRating" value="3.5" />
+        </div>
+      </div>
+
+      <div class="section">
+        <label>指定飯店 (每行一間)</label>
+        <textarea id="watchList" rows="4">
+嘉義智選假日酒店
+耐斯王子大飯店
+兆品酒店嘉義
+嘉義亮點旅店
+承億文旅嘉義商旅
+承億文旅桃城茶樣子
+蘭桂坊花園酒店
+天成文旅-繪日之丘
+嘉義大雅旅店
+嘉義皇品國際酒店
+嘉義觀止飯店
+葉綠宿・漫漫回嘉 Home Way Hotel 嘉義館</textarea
+        >
+      </div>
+
+      <button class="btn" onclick="applySettings()">生成並複製 JSON</button>
+
+      <div id="stepCard" class="step-card">
+        <strong>✅ 設定已複製！</strong><br /><br />
+        手機快速更新步驟：<br />
+        1. 點擊進入
+        <a id="repoLink" href="#" style="color: var(--accent)" target="_blank"
+          >config.json 編輯頁面</a
+        ><br />
+        2. 全選目前的內容並<strong>貼上</strong>剛剛複製的新設定。<br />
+        3. 滑到底部點擊 <strong>Commit changes</strong> 即可生效！
+      </div>
+    </div>
+
+    <script>
+      function applySettings() {
+        const config = {
+          CHECK_IN: document.getElementById("checkin").value,
+          CHECK_OUT: document.getElementById("checkout").value,
+          MAX_PRICE: parseInt(document.getElementById("maxPrice").value),
+          MIN_RATING: parseFloat(document.getElementById("minRating").value),
+          HOTELS_TO_WATCH: document
+            .getElementById("watchList")
+            .value.split("\n")
+            .filter((s) => s.trim()),
+          BLACKLIST: [
+            "金龍海悅飯店",
+            "仲青行旅嘉義館",
+            "LIGHT HOSTEL",
+            "風箏旅人旅社",
+          ],
+          STOP_DATE: "2026-03-12",
+        };
+
+        const jsonStr = JSON.stringify(config, null, 2);
+
+        // 嘗試使用現代 API 複製
+        navigator.clipboard.writeText(jsonStr).then(() => {
+          const user = "knighttkey"; // 這裡寫死你的帳號
+          const repo = "price-notify";
+          document.getElementById("repoLink").href =
+            `https://github.com/${user}/${repo}/edit/main/config.json`;
+          document.getElementById("stepCard").style.display = "block";
+          alert("JSON 已複製！");
+        });
+      }
+    </script>
+  </body>
+</html>
