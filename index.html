@@ -14,62 +14,66 @@
         --success: #10b981;
       }
 
+      * {
+        box-sizing: border-box; /* 全局修正破版問題 */
+      }
+
       body {
         font-family: -apple-system, system-ui, sans-serif;
         background-color: var(--bg);
         color: var(--text);
         margin: 0;
-        padding: 8px;
+        padding: 4px; /* 縮小邊距 */
         display: flex;
         flex-direction: column;
         align-items: center;
       }
 
       .container {
-        max-width: 500px;
+        max-width: 480px;
         width: 100%;
       }
 
       header {
         text-align: center;
-        margin: 12px 0;
+        margin: 8px 0;
       }
 
       h1 {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         margin: 0;
       }
 
       .status-badge {
         display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.7rem;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 0.65rem;
         background: rgba(16, 185, 129, 0.1);
         color: var(--success);
         border: 1px solid rgba(16, 185, 129, 0.2);
-        margin-top: 4px;
+        margin-top: 2px;
       }
 
       .card {
         background: var(--card);
-        border-radius: 12px;
-        padding: 12px;
-        margin-bottom: 8px;
+        border-radius: 8px;
+        padding: 8px; /* 縮小卡片內邊距 */
+        margin-bottom: 6px;
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
       h3 {
-        margin: 0 0 8px 0;
-        font-size: 1rem;
+        margin: 0 0 6px 0;
+        font-size: 0.9rem;
         color: var(--accent);
       }
 
       label {
         display: block;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #94a3b8;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
       }
 
       input,
@@ -77,28 +81,27 @@
         width: 100%;
         background: rgba(15, 23, 42, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
-        padding: 8px;
+        border-radius: 4px;
+        padding: 6px;
         color: white;
-        font-size: 0.9rem;
-        box-sizing: border-box;
-        margin-bottom: 8px;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
       }
 
       .btn {
         width: 100%;
-        padding: 10px;
+        padding: 8px;
         background: var(--primary);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-weight: 600;
         cursor: pointer;
         text-decoration: none;
         display: flex;
         justify-content: center;
         align-items: center;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
       }
 
       .btn:disabled {
@@ -114,7 +117,7 @@
 
       .hotel-item {
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 8px 0;
+        padding: 6px 0;
       }
 
       .hotel-item:last-child {
@@ -122,37 +125,35 @@
       }
       .hotel-name {
         font-weight: 600;
-        font-size: 0.95rem;
-        margin-bottom: 2px;
+        font-size: 0.9rem;
+        margin-bottom: 1px;
       }
       .hotel-meta {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #94a3b8;
         display: flex;
-        gap: 12px;
+        gap: 8px;
       }
       .hotel-link {
         color: var(--accent);
         text-decoration: underline;
-        font-size: 0.8rem;
-        margin-top: 4px;
+        font-size: 0.75rem;
+        margin-top: 2px;
         display: inline-block;
       }
 
       .update-time {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         color: #64748b;
         text-align: center;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
       }
 
-      .token-setup {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px dashed #ef4444;
-        padding: 8px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        font-size: 0.75rem;
+      .save-status {
+        font-size: 0.65rem;
+        text-align: center;
+        margin-top: 4px;
+        display: none;
       }
     </style>
   </head>
@@ -165,18 +166,15 @@
 
       <div id="tokenPanel" class="card">
         <h3>身分驗證</h3>
-        <p style="font-size: 0.7rem; color: #94a3b8; margin: 0 0 8px 0">
-          為了手機直接更新，請填入你的 GitHub PAT (僅存在本機瀏覽器)：
+        <p style="font-size: 0.65rem; color: #94a3b8; margin: 0 0 6px 0">
+          請填入 GitHub PAT 以啟用直接更新：
         </p>
         <input
           type="password"
           id="githubToken"
-          placeholder="ghp_xxxxxxxxxxxx"
+          placeholder="ghp_..."
           onchange="saveToken()"
         />
-        <p style="font-size: 0.65rem; color: #ef4444">
-          * 這是必須的，否則無法直接寫入 config.json
-        </p>
       </div>
 
       <div class="card">
@@ -187,7 +185,7 @@
 
       <div class="card">
         <h3>修改條件</h3>
-        <div style="display: flex; gap: 8px">
+        <div style="display: flex; gap: 6px">
           <div style="flex: 1">
             <label>預算上限</label>
             <input type="number" id="maxPrice" value="2800" />
@@ -213,21 +211,13 @@
 葉綠宿・漫漫回嘉 Home Way Hotel 嘉義館</textarea
         >
         <button id="saveBtn" class="btn" onclick="directUpdate()">
-          儲存並立即生效
+          儲存並生效
         </button>
-        <p
-          id="saveStatus"
-          style="
-            font-size: 0.7rem;
-            text-align: center;
-            margin-top: 8px;
-            display: none;
-          "
-        ></p>
+        <p id="saveStatus" class="save-status"></p>
       </div>
 
       <div class="card" style="background: rgba(99, 102, 241, 0.05)">
-        <h3>立即執行掃描</h3>
+        <h3>立即巡邏</h3>
         <a
           href="https://github.com/knighttkey/price-notify/actions/workflows/hotel_monitor.yml"
           class="btn btn-outline"
@@ -243,7 +233,6 @@
       const repo = "price-notify";
       const filePath = "config.json";
 
-      // 從 localStorage 讀取 Token
       function loadToken() {
         const saved = localStorage.getItem("gh_pat");
         if (saved) document.getElementById("githubToken").value = saved;
@@ -264,7 +253,7 @@
           if (!res.ok) return;
           const data = await res.json();
           document.getElementById("updateTime").textContent =
-            `最後更新時間：${data.last_updated}`;
+            `最後更新：${data.last_updated}`;
           const list = document.getElementById("resultsList");
           list.innerHTML = "";
 
@@ -275,7 +264,7 @@
               div.innerHTML = `
                         <div class="hotel-name">${h.name}</div>
                         <div class="hotel-meta"><span>價格: $${h.price}</span><span>星級: ${h.rating}</span></div>
-                        <a href="${h.url}" class="hotel-link" target="_blank">點此查看房源</a>
+                        <a href="${h.url}" class="hotel-link" target="_blank">查看房源</a>
                     `;
               list.appendChild(div);
             });
@@ -297,11 +286,10 @@
 
         btn.disabled = true;
         status.style.display = "block";
-        status.textContent = "正在通訊中...";
+        status.textContent = "更新中...";
         status.style.color = "#94a3b8";
 
         try {
-          // 1. 取得檔案目前狀態 (需要 SHA 來更新)
           const getRes = await fetch(
             `https://api.github.com/repos/${user}/${repo}/contents/${filePath}`,
             {
@@ -309,15 +297,11 @@
             },
           );
 
-          if (!getRes.ok)
-            throw new Error(
-              "無法取得檔案資訊，請檢查 Token 是否正確或具備 Repo 權限。",
-            );
+          if (!getRes.ok) throw new Error("Token 有誤或無權限。");
           const fileData = await getRes.json();
           const sha = fileData.sha;
 
-          // 2. 組合新內容
-          const config = {
+          const configContent = {
             CHECK_IN: "2026-03-14",
             CHECK_OUT: "2026-03-15",
             MAX_PRICE: parseInt(document.getElementById("maxPrice").value),
@@ -335,7 +319,6 @@
             STOP_DATE: "2026-03-12",
           };
 
-          // 3. 執行更新
           const putRes = await fetch(
             `https://api.github.com/repos/${user}/${repo}/contents/${filePath}`,
             {
@@ -345,9 +328,11 @@
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                message: "web: update config from dashboard",
+                message: "web: update config",
                 content: btoa(
-                  unescape(encodeURIComponent(JSON.stringify(config, null, 2))),
+                  unescape(
+                    encodeURIComponent(JSON.stringify(configContent, null, 2)),
+                  ),
                 ),
                 sha: sha,
               }),
@@ -355,25 +340,18 @@
           );
 
           if (putRes.ok) {
-            status.textContent = "成功生效！雲端已更新。";
-            status.style.color = varValue("--success");
-            alert("設定已直接寫入雲端！");
+            status.textContent = "成功！設定已更新。";
+            status.style.color = "#10b981";
+            alert("設定已儲存！");
           } else {
-            throw new Error("更新失敗，請檢查 Token 權限。");
+            throw new Error("存取遭拒。");
           }
         } catch (e) {
-          status.textContent = "出錯了: " + e.message;
+          status.textContent = "失敗: " + e.message;
           status.style.color = "#ef4444";
-          console.error(e);
         } finally {
           btn.disabled = false;
         }
-      }
-
-      function varValue(name) {
-        return getComputedStyle(document.documentElement)
-          .getPropertyValue(name)
-          .trim();
       }
 
       loadToken();
