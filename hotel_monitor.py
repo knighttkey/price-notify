@@ -159,10 +159,16 @@ def save_state(keys):
     with open("last_state.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(keys))
 
+from datetime import datetime, timezone, timedelta
+
 def save_results_to_json(hotels):
     """將掃描結果存入 results.json 供網頁前端讀取"""
+    # GitHub Actions 伺服器預設為 UTC 時間，在此強制轉換為台灣時間 (UTC+8)
+    tz_tw = timezone(timedelta(hours=8))
+    tw_time_str = datetime.now(tz_tw).strftime("%Y-%m-%d %H:%M:%S")
+
     data = {
-        "last_updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "last_updated": tw_time_str,
         "hotels": hotels
     }
     with open("results.json", "w", encoding="utf-8") as f:
