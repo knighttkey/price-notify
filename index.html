@@ -184,19 +184,27 @@
         </div>
         <label>指定飯店 (每行一間)</label>
         <textarea id="watchList" rows="5">
-嘉義智選假日酒店
-耐斯王子大飯店
-兆品酒店嘉義
-嘉義亮點旅店
-承億文旅嘉義商旅
-承億文旅桃城茶樣子
-蘭桂坊花園酒店
-天成文旅-繪日之丘
-嘉義大雅旅店
-嘉義皇品國際酒店
-嘉義觀止飯店
-葉綠宿・漫漫回嘉 Home Way Hotel 嘉義館</textarea
+大林成都旅社
+仁義湖岸大酒店
+仁義潭溫馨民宿
+嘉義市 偶然行旅
+島宇居行藝文旅
+嘉義 慢漫民宿
+ML Hotel 晨光飯店
+碰碰諸羅山
+嘉宮旅社
+永悅商務大飯店
+Summertime Inn 夏天旅宿</textarea
         >
+
+        <label>排除黑名單 (每行一間)</label>
+        <textarea id="blackList" rows="4">
+金龍海悅飯店
+仲青行旅嘉義館
+LIGHT HOSTEL
+風箏旅人旅社</textarea
+        >
+
         <button id="saveBtn" class="btn" onclick="directUpdate()">
           儲存並生效
         </button>
@@ -326,12 +334,10 @@
               .getElementById("watchList")
               .value.split("\n")
               .filter((s) => s.trim()),
-            BLACKLIST: [
-              "金龍海悅飯店",
-              "仲青行旅嘉義館",
-              "LIGHT HOSTEL",
-              "風箏旅人旅社",
-            ],
+            BLACKLIST: document
+              .getElementById("blackList")
+              .value.split("\n")
+              .filter((s) => s.trim()),
             STOP_DATE: "2026-03-12",
           };
 
