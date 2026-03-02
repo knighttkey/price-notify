@@ -164,19 +164,6 @@
         <div class="status-badge">雲端監控主控室</div>
       </header>
 
-      <div id="tokenPanel" class="card">
-        <h3>身分驗證</h3>
-        <p style="font-size: 0.65rem; color: #94a3b8; margin: 0 0 6px 0">
-          請填入 GitHub PAT 以啟用直接更新：
-        </p>
-        <input
-          type="password"
-          id="githubToken"
-          placeholder="ghp_..."
-          onchange="saveToken()"
-        />
-      </div>
-
       <div class="card">
         <h3>最新掃描結果</h3>
         <div id="updateTime" class="update-time">讀取中...</div>
@@ -214,6 +201,35 @@
           儲存並生效
         </button>
         <p id="saveStatus" class="save-status"></p>
+
+        <!-- 身分設定隱藏區 -->
+        <div
+          style="
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 8px;
+            padding-top: 8px;
+          "
+        >
+          <details>
+            <summary
+              style="font-size: 0.65rem; color: #64748b; cursor: pointer"
+            >
+              進階：身分驗證設定 (初次使用請填寫)
+            </summary>
+            <div style="padding-top: 6px">
+              <input
+                type="password"
+                id="githubToken"
+                placeholder="此處輸入 ghp_..."
+                onchange="saveToken()"
+                style="margin-bottom: 0"
+              />
+              <p style="font-size: 0.6rem; color: #94a3b8; margin: 4px 0 0 0">
+                Token 僅存於您設備的瀏覽器，絕對無法寫入網頁程式碼中以確保安全。
+              </p>
+            </div>
+          </details>
+        </div>
       </div>
 
       <div class="card" style="background: rgba(99, 102, 241, 0.05)">
@@ -280,7 +296,7 @@
         const btn = document.getElementById("saveBtn");
 
         if (!token) {
-          alert("請先填入 GitHub Token！");
+          alert("請先點開下方的「進階：身分驗證設定」並填入你的 Token！");
           return;
         }
 
