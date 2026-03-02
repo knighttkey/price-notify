@@ -38,9 +38,12 @@ def load_config():
 
 config = load_config()
 
-# LINE 配置 (優先讀取 Secrets)
-CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN", "Z7b6eHG+MkPJoltJzYTSzecXQF+BtY2P+m4A2e+t+gyeTd8zg0gx3mGgS9zVyyCi9fAgZ1qsD6Tu4wRSwnotOJUpMBqdUFYFprCnpjp/cOkHuYVwKlXPqscCS3Zzy7jxjDD8Zx4+wNR0pSMkbqf9dAdB04t89/1O/w1cDnyilFU=")
-USER_ID = os.environ.get("USER_ID", "Ub8fb29414d2f8e05b6a79ffbd872384c")
+# LINE 配置 (從 GitHub Secrets 讀取)
+CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN", "")
+USER_ID = os.environ.get("USER_ID", "")
+
+if not CHANNEL_ACCESS_TOKEN or not USER_ID:
+    print("警告：未偵測到 LINE 配置 (CHANNEL_ACCESS_TOKEN 或 USER_ID)，將無法發送通知。")
 
 # 將 config 內容解構成變數
 CHECK_IN = config["CHECK_IN"]
@@ -129,8 +132,13 @@ def get_hotel_data():
                 is_recommended = (price_val <= MAX_PRICE and rating_val >= MIN_RATING)
                 
                 if (is_in_list or is_recommended) and price_val > 0:
-                    status_text = f"{name}\n價格: ${price_val}\n評分: {rating_val}\n連結: {hotel_url}"
-                    found_hotels.append(status_text)
+                    hotel_data = {
+                        "name": name,
+                        "price": price_val,
+                        "rating": rating_val,
+                        "url": hotel_url
+                    }
+                    found_hotels.append(hotel_data)
                     current_state_keys.add(f"{name}-{price_val}")
             except:
                 continue
@@ -151,6 +159,15 @@ def save_state(keys):
     with open("last_state.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(keys))
 
+def save_results_to_json(hotels):
+    """將掃描結果存入 results.json 供網頁前端讀取"""
+    data = {
+        "last_updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "hotels": hotels
+    }
+    with open("results.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
 def main():
     current_date = time.strftime("%Y-%m-%d")
     if current_date >= STOP_DATE:
@@ -162,10 +179,18 @@ def main():
     hotels, current_keys = get_hotel_data()
     last_state = load_state()
     
+    # 儲存到 JSON (供網頁顯示)
+    save_results_to_json(hotels)
+    
     new_items = current_keys - last_state
     
     if new_items:
-        content = "\n\n".join(hotels)
+        # 組合 LINE 訊息
+        msg_list = []
+        for h in hotels:
+            msg_list.append(f"{h['name']}\n價格: ${h['price']}\n評分: {h['rating']}\n連結: {h['url']}")
+        
+        content = "\n\n".join(msg_list)
         msg = f"【發現房源更新！】\n日期：{CHECK_IN}\n\n{content}"
         send_line_push(msg)
         save_state(current_keys)
