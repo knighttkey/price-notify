@@ -1,0 +1,44 @@
+name: Hotel Monitor Bot
+
+on:
+  schedule:
+    - cron: "0 */3 * * *" # 每 3 小時執行一次 (省流量且穩定)
+  workflow_dispatch: # 允許手動從網頁啟動
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Restore State Cache
+        uses: actions/cache@v3
+        with:
+          path: last_state.txt
+          key: hotel-state-${{ github.run_id }}
+          restore-keys: |
+            hotel-state-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Hotel Monitor
+        env:
+          CHANNEL_ACCESS_TOKEN: ${{ secrets.CHANNEL_ACCESS_TOKEN }}
+          USER_ID: ${{ secrets.USER_ID }}
+        run: python hotel_monitor.py
+
+      - name: Save State Cache
+        uses: actions/cache@v3
+        with:
+          path: last_state.txt
+          key: hotel-state-${{ github.run_id }}
