@@ -2,7 +2,7 @@ name: Hotel Monitor Bot
 
 on:
   schedule:
-    - cron: "0 */3 * * *" # 每 3 小時執行一次 (省流量且穩定)
+    - cron: "0 * * * *" # 每個整點執行一次 (本週日前每小時偵測)
   workflow_dispatch: # 允許手動從網頁啟動
 
 jobs:
