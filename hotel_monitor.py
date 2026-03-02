@@ -16,20 +16,26 @@ CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN", "Z7b6eHG+MkPJoltJz
 # 2. 你的 User ID (雲端環境會優先讀取 Secrets)
 USER_ID = os.environ.get("USER_ID", "Ub8fb29414d2f8e05b6a79ffbd872384c")
 
-# 3. 搜尋條件
+# 3. 搜尋條件 (符合以下條件即推薦)
 CHECK_IN = "2026-03-14"
 CHECK_OUT = "2026-03-15"
-MAX_PRICE = 2800
-MIN_RATING = 4.0  # 新增：最低評分門檻
+MAX_PRICE = 2800    # 預算
+MIN_RATING = 3.5    # 最低評分門檻 (調整為 3.5)
 
-# 4. 指定監控飯店清單
+# 4. 指定監控飯店清單 (只要有房就通知，不受上面評分限制)
 HOTELS_TO_WATCH = [
-    "大林成都旅社", "仁義湖岸大酒店", "仁義潭溫馨民宿", "嘉義市 偶然行旅",
-    "島宇居行藝文旅", "嘉義 慢漫民宿", "ML Hotel 晨光飯店", "碰碰諸羅山",
-    "嘉宮旅社", "永悅商務大飯店", "Summertime Inn 夏天旅宿"
+    "嘉義智選假日酒店", "耐斯王子大飯店", "兆品酒店嘉義", "嘉義亮點旅店",
+    "承億文旅嘉義商旅", "承億文旅桃城茶樣子", "蘭桂坊花園酒店", "天成文旅-繪日之丘",
+    "嘉義大雅旅店", "嘉義皇品國際酒店", "嘉義觀止飯店",
+    "葉綠宿・漫漫回嘉 Home Way Hotel 嘉義館"
 ]
 
-# 5. 終止日期 (3/12 後自動停止)
+# 5. 黑名單 (永久過濾，不論條件都不會出現在通知中)
+BLACKLIST = [
+    "金龍海悅飯店", "仲青行旅嘉義館", "LIGHT HOSTEL", "風箏旅人旅社"
+]
+
+# 6. 自動結束時間
 STOP_DATE = "2026-03-12"
 
 # 狀態追蹤
@@ -97,8 +103,12 @@ def get_hotel_data():
                     rating_val = 0.0 # 若抓不到評分則預設為 0
 
                 # 判定邏輯：
-                # A. 在監控清單內 (不管評分)
-                # B. 符合預算且評分達標
+                # 0. 先檢查是否在黑名單
+                if any(b in name for b in BLACKLIST):
+                    continue
+
+                # 1. 在監控清單內 (不管評分)
+                # 2. 符合預算且評分達標
                 is_in_list = any(target in name for target in HOTELS_TO_WATCH)
                 is_recommended = (price_val <= MAX_PRICE and rating_val >= MIN_RATING)
                 
