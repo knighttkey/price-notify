@@ -15,62 +15,61 @@
       }
 
       body {
-        font-family:
-          "Inter",
-          -apple-system,
-          sans-serif;
+        font-family: -apple-system, system-ui, sans-serif;
         background-color: var(--bg);
         color: var(--text);
         margin: 0;
-        padding: 1rem;
+        padding: 8px;
         display: flex;
         flex-direction: column;
         align-items: center;
       }
 
       .container {
-        max-width: 600px;
+        max-width: 500px;
         width: 100%;
       }
 
       header {
         text-align: center;
-        margin: 2rem 0;
+        margin: 12px 0;
       }
 
       h1 {
-        font-size: 1.5rem;
-        background: linear-gradient(to right, var(--primary), var(--accent));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 1.2rem;
         margin: 0;
       }
 
       .status-badge {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 99px;
-        font-size: 0.75rem;
-        background: rgba(16, 185, 129, 0.2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        background: rgba(16, 185, 129, 0.1);
         color: var(--success);
-        margin-top: 0.5rem;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        margin-top: 4px;
       }
 
       .card {
         background: var(--card);
-        backdrop-filter: blur(12px);
-        border-radius: 20px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      }
+
+      h3 {
+        margin: 0 0 8px 0;
+        font-size: 1rem;
+        color: var(--accent);
       }
 
       label {
         display: block;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: #94a3b8;
-        margin-bottom: 0.5rem;
+        margin-bottom: 4px;
       }
 
       input,
@@ -78,33 +77,28 @@
         width: 100%;
         background: rgba(15, 23, 42, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 0.8rem;
+        border-radius: 6px;
+        padding: 8px;
         color: white;
         font-size: 0.9rem;
         box-sizing: border-box;
-        margin-bottom: 1rem;
+        margin-bottom: 8px;
       }
 
       .btn {
         width: 100%;
-        padding: 1rem;
+        padding: 10px;
         background: var(--primary);
         color: white;
         border: none;
-        border-radius: 14px;
+        border-radius: 8px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
         text-decoration: none;
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 0.5rem;
-      }
-
-      .btn:active {
-        transform: scale(0.98);
+        font-size: 0.9rem;
       }
 
       .btn-outline {
@@ -115,7 +109,7 @@
 
       .hotel-item {
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 1rem 0;
+        padding: 8px 0;
       }
 
       .hotel-item:last-child {
@@ -123,35 +117,37 @@
       }
       .hotel-name {
         font-weight: 600;
-        margin-bottom: 0.25rem;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
       }
       .hotel-meta {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #94a3b8;
         display: flex;
-        gap: 1rem;
+        gap: 12px;
       }
       .hotel-link {
         color: var(--accent);
-        text-decoration: none;
-        font-size: 0.85rem;
-        margin-top: 0.5rem;
+        text-decoration: underline;
+        font-size: 0.8rem;
+        margin-top: 4px;
         display: inline-block;
       }
 
       .update-time {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         color: #64748b;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 8px;
       }
 
       #resultsList:empty::after {
-        content: "暫無搜尋結果，請點擊下方按鈕啟動掃描。";
-        display: block;
+        content: "暫無搜尋結果。";
         text-align: center;
+        display: block;
         color: #64748b;
-        padding: 2rem 0;
+        padding: 12px 0;
+        font-size: 0.8rem;
       }
     </style>
   </head>
@@ -159,29 +155,29 @@
     <div class="container">
       <header>
         <h1>嘉義飯店監測控制台</h1>
-        <div class="status-badge">● 雲端監控中 (每小時)</div>
+        <div class="status-badge">雲端監控中 (每小時)</div>
       </header>
 
       <div class="card">
-        <h3 style="margin-top: 0">📡 最新掃描結果</h3>
+        <h3>最新掃描結果</h3>
         <div id="updateTime" class="update-time">讀取中...</div>
         <div id="resultsList"></div>
       </div>
 
       <div class="card">
-        <h3>⚙️ 修改條件</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem">
-          <div>
+        <h3>修改條件</h3>
+        <div style="display: flex; gap: 8px">
+          <div style="flex: 1">
             <label>預算上限</label>
             <input type="number" id="maxPrice" value="2800" />
           </div>
-          <div>
+          <div style="flex: 1">
             <label>最低星級</label>
             <input type="number" step="0.1" id="minRating" value="3.5" />
           </div>
         </div>
         <label>指定飯店 (每行一間)</label>
-        <textarea id="watchList" rows="4">
+        <textarea id="watchList" rows="5">
 嘉義智選假日酒店
 耐斯王子大飯店
 兆品酒店嘉義
@@ -200,17 +196,17 @@
         </button>
       </div>
 
-      <div class="card" style="background: rgba(99, 102, 241, 0.1)">
-        <h3>⚡️ 立即執行掃描</h3>
-        <p style="font-size: 0.85rem; color: #94a3b8">
-          雲端伺服器每小時會自動抓取一次。若你要現在立即查詢：
+      <div class="card" style="background: rgba(99, 102, 241, 0.05)">
+        <h3>立即執行掃描</h3>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin: 4px 0 8px 0">
+          若要立即查詢，請前往 Actions 執行：
         </p>
         <a
           href="https://github.com/knighttkey/price-notify/actions/workflows/hotel_monitor.yml"
           class="btn btn-outline"
           target="_blank"
         >
-          前往 Actions 點擊 Run Workflow
+          前往 Actions 啟動
         </a>
       </div>
     </div>
@@ -219,7 +215,6 @@
       const user = "knighttkey";
       const repo = "price-notify";
 
-      // 載入結果
       async function fetchResults() {
         try {
           const res = await fetch(
@@ -240,10 +235,10 @@
               div.innerHTML = `
                         <div class="hotel-name">${h.name}</div>
                         <div class="hotel-meta">
-                            <span>💰 $${h.price}</span>
-                            <span>⭐ ${h.rating}</span>
+                            <span>價格: $${h.price}</span>
+                            <span>星級: ${h.rating}</span>
                         </div>
-                        <a href="${h.url}" class="hotel-link" target="_blank">查看房源 →</a>
+                        <a href="${h.url}" class="hotel-link" target="_blank">點此查看房源</a>
                     `;
               list.appendChild(div);
             });
@@ -253,7 +248,6 @@
         }
       }
 
-      // 複製並跳轉
       function copyAndGo() {
         const config = {
           CHECK_IN: "2026-03-14",
@@ -275,7 +269,7 @@
 
         const jsonStr = JSON.stringify(config, null, 2);
         navigator.clipboard.writeText(jsonStr).then(() => {
-          alert("JSON 設定已複製！即將前往編輯頁面，請貼上並儲存。");
+          alert("JSON 設定已複製！即將前往編輯頁面。");
           window.open(
             `https://github.com/${user}/${repo}/edit/main/config.json`,
             "_blank",

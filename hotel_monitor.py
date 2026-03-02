@@ -191,7 +191,7 @@ def main():
             msg_list.append(f"{h['name']}\n價格: ${h['price']}\n評分: {h['rating']}\n連結: {h['url']}")
         
         content = "\n\n".join(msg_list)
-        msg = f"【發現房源更新！】\n日期：{CHECK_IN}\n\n{content}"
+        msg = f"[發現房源更新]\n日期：{CHECK_IN}\n\n{content}"
         send_line_push(msg)
         save_state(current_keys)
         print("偵測到變動，已發送 LINE 通知。")
