@@ -101,6 +101,11 @@
         font-size: 0.9rem;
       }
 
+      .btn:disabled {
+        background: #475569;
+        cursor: not-allowed;
+      }
+
       .btn-outline {
         background: transparent;
         border: 1px solid var(--primary);
@@ -141,13 +146,13 @@
         margin-bottom: 8px;
       }
 
-      #resultsList:empty::after {
-        content: "暫無搜尋結果。";
-        text-align: center;
-        display: block;
-        color: #64748b;
-        padding: 12px 0;
-        font-size: 0.8rem;
+      .token-setup {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px dashed #ef4444;
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-size: 0.75rem;
       }
     </style>
   </head>
@@ -155,8 +160,24 @@
     <div class="container">
       <header>
         <h1>嘉義飯店監測控制台</h1>
-        <div class="status-badge">雲端監控中 (每小時)</div>
+        <div class="status-badge">雲端監控主控室</div>
       </header>
+
+      <div id="tokenPanel" class="card">
+        <h3>身分驗證</h3>
+        <p style="font-size: 0.7rem; color: #94a3b8; margin: 0 0 8px 0">
+          為了手機直接更新，請填入你的 GitHub PAT (僅存在本機瀏覽器)：
+        </p>
+        <input
+          type="password"
+          id="githubToken"
+          placeholder="ghp_xxxxxxxxxxxx"
+          onchange="saveToken()"
+        />
+        <p style="font-size: 0.65rem; color: #ef4444">
+          * 這是必須的，否則無法直接寫入 config.json
+        </p>
+      </div>
 
       <div class="card">
         <h3>最新掃描結果</h3>
@@ -191,16 +212,22 @@
 嘉義觀止飯店
 葉綠宿・漫漫回嘉 Home Way Hotel 嘉義館</textarea
         >
-        <button class="btn" onclick="copyAndGo()">
-          生成並更新設定 (config.json)
+        <button id="saveBtn" class="btn" onclick="directUpdate()">
+          儲存並立即生效
         </button>
+        <p
+          id="saveStatus"
+          style="
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 8px;
+            display: none;
+          "
+        ></p>
       </div>
 
       <div class="card" style="background: rgba(99, 102, 241, 0.05)">
         <h3>立即執行掃描</h3>
-        <p style="font-size: 0.75rem; color: #94a3b8; margin: 4px 0 8px 0">
-          若要立即查詢，請前往 Actions 執行：
-        </p>
         <a
           href="https://github.com/knighttkey/price-notify/actions/workflows/hotel_monitor.yml"
           class="btn btn-outline"
@@ -214,6 +241,20 @@
     <script>
       const user = "knighttkey";
       const repo = "price-notify";
+      const filePath = "config.json";
+
+      // 從 localStorage 讀取 Token
+      function loadToken() {
+        const saved = localStorage.getItem("gh_pat");
+        if (saved) document.getElementById("githubToken").value = saved;
+      }
+
+      function saveToken() {
+        localStorage.setItem(
+          "gh_pat",
+          document.getElementById("githubToken").value,
+        );
+      }
 
       async function fetchResults() {
         try {
@@ -222,7 +263,6 @@
           );
           if (!res.ok) return;
           const data = await res.json();
-
           document.getElementById("updateTime").textContent =
             `最後更新時間：${data.last_updated}`;
           const list = document.getElementById("resultsList");
@@ -234,10 +274,7 @@
               div.className = "hotel-item";
               div.innerHTML = `
                         <div class="hotel-name">${h.name}</div>
-                        <div class="hotel-meta">
-                            <span>價格: $${h.price}</span>
-                            <span>星級: ${h.rating}</span>
-                        </div>
+                        <div class="hotel-meta"><span>價格: $${h.price}</span><span>星級: ${h.rating}</span></div>
                         <a href="${h.url}" class="hotel-link" target="_blank">點此查看房源</a>
                     `;
               list.appendChild(div);
@@ -248,35 +285,98 @@
         }
       }
 
-      function copyAndGo() {
-        const config = {
-          CHECK_IN: "2026-03-14",
-          CHECK_OUT: "2026-03-15",
-          MAX_PRICE: parseInt(document.getElementById("maxPrice").value),
-          MIN_RATING: parseFloat(document.getElementById("minRating").value),
-          HOTELS_TO_WATCH: document
-            .getElementById("watchList")
-            .value.split("\n")
-            .filter((s) => s.trim()),
-          BLACKLIST: [
-            "金龍海悅飯店",
-            "仲青行旅嘉義館",
-            "LIGHT HOSTEL",
-            "風箏旅人旅社",
-          ],
-          STOP_DATE: "2026-03-12",
-        };
+      async function directUpdate() {
+        const token = document.getElementById("githubToken").value;
+        const status = document.getElementById("saveStatus");
+        const btn = document.getElementById("saveBtn");
 
-        const jsonStr = JSON.stringify(config, null, 2);
-        navigator.clipboard.writeText(jsonStr).then(() => {
-          alert("JSON 設定已複製！即將前往編輯頁面。");
-          window.open(
-            `https://github.com/${user}/${repo}/edit/main/config.json`,
-            "_blank",
+        if (!token) {
+          alert("請先填入 GitHub Token！");
+          return;
+        }
+
+        btn.disabled = true;
+        status.style.display = "block";
+        status.textContent = "正在通訊中...";
+        status.style.color = "#94a3b8";
+
+        try {
+          // 1. 取得檔案目前狀態 (需要 SHA 來更新)
+          const getRes = await fetch(
+            `https://api.github.com/repos/${user}/${repo}/contents/${filePath}`,
+            {
+              headers: { Authorization: `token ${token}` },
+            },
           );
-        });
+
+          if (!getRes.ok)
+            throw new Error(
+              "無法取得檔案資訊，請檢查 Token 是否正確或具備 Repo 權限。",
+            );
+          const fileData = await getRes.json();
+          const sha = fileData.sha;
+
+          // 2. 組合新內容
+          const config = {
+            CHECK_IN: "2026-03-14",
+            CHECK_OUT: "2026-03-15",
+            MAX_PRICE: parseInt(document.getElementById("maxPrice").value),
+            MIN_RATING: parseFloat(document.getElementById("minRating").value),
+            HOTELS_TO_WATCH: document
+              .getElementById("watchList")
+              .value.split("\n")
+              .filter((s) => s.trim()),
+            BLACKLIST: [
+              "金龍海悅飯店",
+              "仲青行旅嘉義館",
+              "LIGHT HOSTEL",
+              "風箏旅人旅社",
+            ],
+            STOP_DATE: "2026-03-12",
+          };
+
+          // 3. 執行更新
+          const putRes = await fetch(
+            `https://api.github.com/repos/${user}/${repo}/contents/${filePath}`,
+            {
+              method: "PUT",
+              headers: {
+                Authorization: `token ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                message: "web: update config from dashboard",
+                content: btoa(
+                  unescape(encodeURIComponent(JSON.stringify(config, null, 2))),
+                ),
+                sha: sha,
+              }),
+            },
+          );
+
+          if (putRes.ok) {
+            status.textContent = "成功生效！雲端已更新。";
+            status.style.color = varValue("--success");
+            alert("設定已直接寫入雲端！");
+          } else {
+            throw new Error("更新失敗，請檢查 Token 權限。");
+          }
+        } catch (e) {
+          status.textContent = "出錯了: " + e.message;
+          status.style.color = "#ef4444";
+          console.error(e);
+        } finally {
+          btn.disabled = false;
+        }
       }
 
+      function varValue(name) {
+        return getComputedStyle(document.documentElement)
+          .getPropertyValue(name)
+          .trim();
+      }
+
+      loadToken();
       fetchResults();
     </script>
   </body>
