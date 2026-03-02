@@ -49,6 +49,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          touch last_state.txt
           git add results.json last_state.txt
           git commit -m "docs: update latest hotel results [skip ci]" || echo "No changes to commit"
           git push
