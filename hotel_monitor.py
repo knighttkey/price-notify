@@ -14,7 +14,7 @@ def load_config():
     default_config = {
         "CHECK_IN": "2026-03-14",
         "CHECK_OUT": "2026-03-15",
-        "MAX_PRICE": 2800,
+        "MAX_PRICE": 3000,
         "MIN_RATING": 3.5,
         "HOTELS_TO_WATCH": [
             "大林成都旅社", "仁義湖岸大酒店", "仁義潭溫馨民宿", "嘉義市 偶然行旅",
