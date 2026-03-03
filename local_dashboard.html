@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地飯店監測儀表板</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+            --accent: #22d3ee;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 { margin-top: 0; font-size: 1.25rem; color: var(--accent); }
+
+        .update-time {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .results-table th, .results-table td {
+            text-align: left;
+            padding: 12px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .results-table th {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .hotel-name { font-weight: 600; color: white; }
+        .hotel-price { color: var(--accent); font-weight: bold; }
+        
+        .status-badge {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent);
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        .empty-msg {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 30px;">
+            <h1 style="margin: 0; color: white;">本地監測儀表板</h1>
+            <p style="color: #94a3b8; font-size: 0.9rem;">即時讀取本地端搜尋結果</p>
+        </header>
+
+        <div class="card">
+            <h2>最新掃描結果</h2>
+            <div id="updateTime" class="update-time">載入中...</div>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45%">飯店名稱</th>
+                        <th style="width: 15%">價格</th>
+                        <th style="width: 15%">來源</th>
+                        <th style="width: 12%">星級</th>
+                        <th style="width: 13%">預訂</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsList"></tbody>
+            </table>
+            <div id="emptyMsg" class="empty-msg" style="display: none;">目前沒有符合條件的飯店。</div>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn" onclick="fetchResults()">立即重整數據</button>
+        </div>
+    </div>
+
+    <script>
+        async function fetchResults() {
+            try {
+                // 直接從本地路徑讀取 results.json (需在瀏覽器允許跨域或透過 local server 開啟)
+                // 為了讓用戶直接雙擊 HTML 就能看，我們加上隨機參數避免快取
+                const res = await fetch(`results.json?t=${Date.now()}`);
+                if (!res.ok) throw new Error("檔案尚未建立");
+                
+                const data = await res.json();
+                document.getElementById("updateTime").textContent = `最後掃描時間：${data.last_updated}`;
+                
+                const list = document.getElementById("resultsList");
+                const emptyMsg = document.getElementById("emptyMsg");
+                list.innerHTML = "";
+
+                if (data.hotels && data.hotels.length > 0) {
+                    emptyMsg.style.display = "none";
+                    data.hotels.forEach(hotel => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td class="hotel-name">${hotel.name}</td>
+                            <td class="hotel-price">$${hotel.price}</td>
+                            <td><span class="status-badge">${hotel.source || "Google"}</span></td>
+                            <td>${hotel.rating} ★</td>
+                            <td><a href="${hotel.url}" target="_blank" class="btn" style="padding: 4px 10px; font-size: 0.75rem;">查看</a></td>
+                        `;
+                        list.appendChild(tr);
+                    });
+                } else {
+                    emptyMsg.style.display = "block";
+                }
+            } catch (e) {
+                document.getElementById("updateTime").textContent = "尚未發現 results.json 或讀取失敗。";
+                console.error(e);
+            }
+        }
+
+        // 啟動與每 30 秒自動更新一次
+        fetchResults();
+        setInterval(fetchResults, 30000);
+    </script>
+</body>
+</html>

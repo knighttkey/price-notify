@@ -107,9 +107,28 @@ def get_hotel_data():
             
             items = driver.find_elements(By.CSS_SELECTOR, "div[role='listitem']")
             
+            # 如果列表為空，或者是單一飯店卡片頁面
+            if not items:
+                # 嘗試抓取頁面中大標題作為飯店名稱 (通常是單一導向頁面)
+                try:
+                    # 尋找頁面主要標題
+                    single_name_elem = driver.find_element(By.CSS_SELECTOR, "h1, h2, [role='heading'][aria-level='1']")
+                    name = single_name_elem.text
+                    if name and any(target in name for target in HOTELS_TO_WATCH):
+                        items = [driver.find_element(By.TAG_NAME, "body")] # 偽造一個項進行解析
+                except:
+                    pass
+
             for item in items:
                 try:
-                    name = item.find_element(By.TAG_NAME, "h2").text
+                    # 名稱抓取備案 (h2, h3, role=heading, 或特定 class)
+                    name = ""
+                    for selector in ["h2", "h3", "[role='heading']", ".W8db6c"]:
+                        try:
+                            name = item.find_element(By.CSS_SELECTOR, selector).text
+                            if name: break
+                        except: continue
+                    
                     if not name or name in processed_names:
                         continue
                         
@@ -120,32 +139,40 @@ def get_hotel_data():
                     price_val = 0
                     source = "Google"
                     
-                    try:
-                        # 優先尋找包含「元」的元素 (通常是價格)
-                        price_element = item.find_element(By.CSS_SELECTOR, "span[aria-label*='元']")
-                        full_label = price_element.get_attribute("aria-label") or ""
-                        price_val = int(''.join(filter(str.isdigit, price_element.text)))
-                        
-                        # 從 aria-label 判定來源
-                        if "Agoda" in full_label: source = "Agoda"
-                        elif "Booking" in full_label or "繽客" in full_label: source = "Booking.com"
-                        elif "Trip.com" in full_label: source = "Trip.com"
-                        elif "Expedia" in full_label: source = "Expedia"
-                        elif " Hotels.com" in full_label: source = "Hotels.com"
-                    except:
-                        # 備案：如果找不到帶「元」的，找任何看起來像價格的數字
-                        try:
-                            price_element = item.find_element(By.XPATH, ".//*[contains(text(), '$')]")
-                            price_val = int(''.join(filter(str.isdigit, price_element.text)))
-                        except:
-                            continue
+                    # 遍歷所有可能包含價格的元素
+                    price_candidates = item.find_elements(By.CSS_SELECTOR, "span[aria-label*='元'], span[aria-label*='NT$'], .MJ69ic")
+                    
+                    if not price_candidates:
+                        # 備案 XPATH 尋找
+                        price_candidates = item.find_elements(By.XPATH, ".//*[contains(text(), '$') or contains(text(), '元')]")
 
-                    # 2. 抓取評分 (強制抓取 Google Maps 的評分)
+                    for pc in price_candidates:
+                        full_label = pc.get_attribute("aria-label") or pc.text or ""
+                        try:
+                            digits = ''.join(filter(str.isdigit, pc.text))
+                            if not digits: continue
+                            price_val = int(digits)
+                            
+                            if "Agoda" in full_label: source = "Agoda"
+                            elif "Booking" in full_label or "繽客" in full_label: source = "Booking.com"
+                            elif "Trip.com" in full_label: source = "Trip.com"
+                            elif "Expedia" in full_label: source = "Expedia"
+                            elif "Hotel" in full_label: source = "Hotels.com"
+                            
+                            if price_val > 0: break
+                        except: continue
+
+                    if price_val == 0: continue
+
+                    # 2. 抓取評分 (Google 星等)
                     try:
-                        # Google 評分通常在 aria-label 包含「顆星」或「stars」的元素
-                        rating_element = item.find_element(By.CSS_SELECTOR, "[aria-label*='星'], [aria-label*='star']")
-                        rating_text = rating_element.get_attribute("aria-label")
-                        rating_val = float(rating_text.split(" ")[0])
+                        # 尋找包含「星」的屬性
+                        rating_elem = item.find_element(By.CSS_SELECTOR, "[aria-label*='星'], [aria-label*='star']")
+                        rating_text = rating_elem.get_attribute("aria-label")
+                        # 處理 "4.5 顆星" 或 "4.5 stars"
+                        import re
+                        match = re.search(r"(\d+\.?\d*)", rating_text)
+                        rating_val = float(match.group(1)) if match else 0.0
                     except:
                         rating_val = 0.0
 
