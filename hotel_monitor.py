@@ -3,15 +3,24 @@ import sys
 import time
 import requests
 import json
+import re
+import warnings
+from datetime import datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
+# 抑制 urllib3 的 SSL 警告
+try:
+    from urllib3.exceptions import NotOpenSSLWarning
+    warnings.simplefilter('ignore', NotOpenSSLWarning)
+except ImportError:
+    pass
+
 # ===================== [配置讀取區] =====================
 def load_config():
     """載入本地 config.json 或使用預設值"""
-def load_config():
     default_config = {
         "CHECK_IN": "2026-03-14",
         "CHECK_OUT": "2026-03-15",
@@ -119,7 +128,6 @@ def get_hotel_data():
     processed_names = set()
 
     try:
-        # 1. 來源甲：Google Travel (廣度與指定搜尋)
         search_queries = [
             f"嘉義 飯店 住宿 {CHECK_IN} {CHECK_OUT}",
             f"嘉義 民宿 住宿 {CHECK_IN} {CHECK_OUT}"
@@ -130,22 +138,23 @@ def get_hotel_data():
         for query in search_queries:
             target_url = f"https://www.google.com/travel/search?q={query}"
             driver.get(target_url)
-            time.sleep(4)
+            time.sleep(6) # 穩定載入
             
+            # --- 策略 A: 標準 DOM 解析 ---
             items = driver.find_elements(By.CSS_SELECTOR, "div[role='listitem']")
             if not items:
                 try:
-                    single_name_elem = driver.find_element(By.CSS_SELECTOR, "h1, h2, [role='heading'][aria-level='1']")
-                    if any(target in single_name_elem.text for target in HOTELS_TO_WATCH):
-                        items = [driver.find_element(By.TAG_NAME, "body")]
+                    # 處理單一飯店導覽頁
+                    name_elem = driver.find_element(By.CSS_SELECTOR, "h1, h2")
+                    if name_elem: items = [driver.find_element(By.TAG_NAME, "body")]
                 except: pass
 
             for item in items:
                 try:
                     name = ""
-                    for selector in ["h2", "h3", "[role='heading']", ".W8db6c"]:
+                    for s in ["h2", "h3", "[role='heading']", ".W8db6c", ".P83p7e"]:
                         try:
-                            name = item.find_element(By.CSS_SELECTOR, selector).text
+                            name = item.find_element(By.CSS_SELECTOR, s).text
                             if name: break
                         except: continue
                     
@@ -153,115 +162,67 @@ def get_hotel_data():
                     if any(b in name for b in BLACKLIST): continue
 
                     # 抓取價格與來源
-                    price_val = 0
-                    source = "Google"
-                    price_candidates = item.find_elements(By.CSS_SELECTOR, "span[aria-label*='元'], span[aria-label*='NT$'], .MJ69ic")
-                    if not price_candidates:
-                        price_candidates = item.find_elements(By.XPATH, ".//*[contains(text(), '$') or contains(text(), '元')]")
-
-                    for pc in price_candidates:
-                        label = pc.get_attribute("aria-label") or pc.text or ""
-                        try:
-                            digits = ''.join(filter(str.isdigit, pc.text))
-                            if not digits: continue
-                            price_val = int(digits)
-                            if "Agoda" in label: source = "Agoda"
-                            elif "Booking" in label or "繽客" in label: source = "Booking.com"
-                            elif "Trip.com" in label: source = "Trip.com"
-                            if price_val > 0: break
-                        except: continue
-
-                    if price_val == 0: continue
-
+                    price_elements = item.find_elements(By.CSS_SELECTOR, "span[aria-label*='元'], span[aria-label*='NT$'], .MJ69ic, .U986S")
+                    
                     # 抓取評分
                     rating_val = 0.0
                     try:
                         rating_elem = item.find_element(By.CSS_SELECTOR, "[aria-label*='星'], [aria-label*='star']")
-                        import re
-                        match = re.search(r"(\d+\.?\d*)", rating_elem.get_attribute("aria-label"))
-                        rating_val = float(match.group(1)) if match else 0.0
-                    except:
-                        pass # If not found, will be verified below
+                        r_match = re.search(r"(\d+\.?\d*)", rating_elem.get_attribute("aria-label"))
+                        rating_val = float(r_match.group(1)) if r_match else 0.0
+                    except: pass
 
-                    # 評分驗證
-                    if rating_val < MIN_RATING: # If rating is low or missing, verify with Google Maps
-                        verified_rating = get_google_rating(driver, name)
-                        if verified_rating > rating_val: # Use the higher rating if verified
-                            rating_val = verified_rating
-
-                    is_in_list = any(target in name for target in HOTELS_TO_WATCH)
-                    is_recommended = (price_val <= MAX_PRICE and rating_val >= MIN_RATING)
+                    found_any_for_this = False
+                    for pe in price_elements:
+                        label = pe.get_attribute("aria-label") or ""
+                        try:
+                            digits = ''.join(filter(str.isdigit, pe.text))
+                            if not digits: continue
+                            val = int(digits)
+                            src = "Google"
+                            if "Agoda" in label: src = "Agoda"
+                            elif "Booking" in label or "繽客" in label: src = "Booking.com"
+                            elif "Trip.com" in label: src = "Trip.com"
+                            
+                            is_watch = any(t in name for t in HOTELS_TO_WATCH)
+                            is_rec = (val <= MAX_PRICE and rating_val >= MIN_RATING)
+                            
+                            if is_watch or is_rec:
+                                found_hotels.append({
+                                    "name": name, "price": val, "rating": rating_val,
+                                    "source": src, "url": target_url
+                                })
+                                current_state_keys.add(f"{name}-{src}-{val}")
+                                found_any_for_this = True
+                        except: continue
                     
-                    if (is_in_list or is_recommended) and price_val > 0:
-                        found_hotels.append({
-                            "name": name, "price": price_val, "rating": rating_val,
-                            "source": source, "url": target_url
-                        })
-                        current_state_keys.add(f"{name}-{price_val}")
-                        processed_names.add(name)
-                except Exception as item_e:
-                    print(f"處理 Google Travel 項目時發生錯誤: {item_e}")
-                    continue
-    except Exception as e:
-        print(f"Google Travel 抓取發生錯誤: {e}")
+                    if found_any_for_this: processed_names.add(name)
+                except: continue
 
-    # 2. 來源乙：Agoda 直接搜尋 (透過 Google Search 快速摘要抓取)
-    try:
-        for hotel in HOTELS_TO_WATCH: # 針對所有關注的飯店
-            search_url = f"https://www.google.com/search?q={hotel}+Agoda+價格"
-            driver.get(search_url)
-            time.sleep(3)
-            try:
-                # 尋找搜尋結果中的 Agoda 價格標籤
-                # 嘗試尋找包含 "Agoda" 和價格的元素
-                price_box = driver.find_element(By.XPATH, "//*[contains(text(), 'Agoda')]/ancestor::div[contains(@class, 'g')]//span[contains(text(), '$') or contains(text(), '元')]")
-                price_text = price_box.text
-                digits = ''.join(filter(str.isdigit, price_text))
-                if digits:
-                    price_val = int(digits)
-                    if price_val > 0 and hotel not in processed_names:
-                        rating_val = get_google_rating(driver, hotel)
-                        if rating_val >= MIN_RATING or hotel in HOTELS_TO_WATCH:
-                            found_hotels.append({
-                                "name": hotel, "price": price_val, "rating": rating_val,
-                                "source": "Agoda", "url": search_url # URL to Google search result
-                            })
-                            current_state_keys.add(f"{hotel}-{price_val}")
-                            processed_names.add(hotel)
-            except: 
-                # print(f"未在 Google Search 中找到 {hotel} 的 Agoda 價格。")
-                pass
-    except Exception as e:
-        print(f"Agoda 抓取發生錯誤: {e}")
+            # --- 策略 B: 深度源碼 Regex 解析 (二次保險) ---
+            page_content = driver.page_source
+            for target in HOTELS_TO_WATCH:
+                if target not in processed_names and target in page_content:
+                    # 搜尋價格 (尋找與飯店名稱在同一個資料塊區域的價格)
+                    try:
+                        # 使用更寬鬆但針對性的 Regex
+                        # 尋找 飯店名稱 ... $2,267 這種結構 (排除 HTML 標籤)
+                        match = re.search(re.escape(target) + r".{0,2000}?(\$|NT\$|元)\s?(\d{1,3}(?:,\d{3})*)", page_content, re.DOTALL)
+                        if match:
+                            price_val = int(match.group(2).replace(",", ""))
+                            if price_val > 0:
+                                # 補償評分 (因為 Regex 抓不到評分元件，所以回頭查)
+                                rating = get_google_rating(driver, target)
+                                found_hotels.append({
+                                    "name": target, "price": price_val, "rating": rating,
+                                    "source": "Agoda/Google", "url": target_url
+                                })
+                                current_state_keys.add(f"{target}-Regex-{price_val}")
+                                processed_names.add(target)
+                    except: pass
 
-    # 3. 來源丙：Booking.com 直接搜尋 (透過 Google Search 快速摘要抓取)
-    try:
-        for hotel in HOTELS_TO_WATCH: # 針對所有關注的飯店
-            search_url = f"https://www.google.com/search?q={hotel}+Booking.com+價格"
-            driver.get(search_url)
-            time.sleep(3)
-            try:
-                # 尋找搜尋結果中的 Booking.com 價格標籤
-                # 嘗試尋找包含 "Booking.com" 和價格的元素
-                price_box = driver.find_element(By.XPATH, "//*[contains(text(), 'Booking.com') or contains(text(), '繽客')]/ancestor::div[contains(@class, 'g')]//span[contains(text(), '$') or contains(text(), '元')]")
-                price_text = price_box.text
-                digits = ''.join(filter(str.isdigit, price_text))
-                if digits:
-                    price_val = int(digits)
-                    if price_val > 0 and hotel not in processed_names:
-                        rating_val = get_google_rating(driver, hotel)
-                        if rating_val >= MIN_RATING or hotel in HOTELS_TO_WATCH:
-                            found_hotels.append({
-                                "name": hotel, "price": price_val, "rating": rating_val,
-                                "source": "Booking.com", "url": search_url # URL to Google search result
-                            })
-                            current_state_keys.add(f"{hotel}-{price_val}")
-                            processed_names.add(hotel)
-            except: 
-                # print(f"未在 Google Search 中找到 {hotel} 的 Booking.com 價格。")
-                pass
     except Exception as e:
-        print(f"Booking.com 抓取發生錯誤: {e}")
+        print(f"資料抓取發生錯誤: {e}")
 
     finally:
         driver.quit()
