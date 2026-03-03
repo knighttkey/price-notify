@@ -4,4 +4,4 @@ __pycache__/
 .DS_Store
 secrets.json
 last_state.txt
-debug_page.html
+debug_*
