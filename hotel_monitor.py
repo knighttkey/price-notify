@@ -1,22 +1,20 @@
 import os
 import sys
+
+# 強制抑制所有警告，包含 urllib3 的 SSL 警告
+os.environ['PYTHONWARNINGS'] = 'ignore'
+import warnings
+warnings.filterwarnings("ignore")
+
 import time
 import requests
 import json
 import re
-import warnings
 from datetime import datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
-
-# 抑制 urllib3 的 SSL 警告
-try:
-    from urllib3.exceptions import NotOpenSSLWarning
-    warnings.simplefilter('ignore', NotOpenSSLWarning)
-except ImportError:
-    pass
 
 # ===================== [配置讀取區] =====================
 def load_config():
@@ -203,23 +201,23 @@ def get_hotel_data():
             page_content = driver.page_source
             for target in HOTELS_TO_WATCH:
                 if target not in processed_names and target in page_content:
-                    # 搜尋價格 (尋找與飯店名稱在同一個資料塊區域的價格)
                     try:
-                        # 使用更寬鬆但針對性的 Regex
                         # 尋找 飯店名稱 ... $2,267 這種結構 (排除 HTML 標籤)
-                        match = re.search(re.escape(target) + r".{0,2000}?(\$|NT\$|元)\s?(\d{1,3}(?:,\d{3})*)", page_content, re.DOTALL)
+                        # 改進 Regex 偵測，允許更多字元並正確處理逗號
+                        match = re.search(re.escape(target) + r".{0,3000}?(?:\$|NT\$|元)\s?(\d{1,3}(?:,\d{3})*)", page_content, re.DOTALL)
                         if match:
-                            price_val = int(match.group(2).replace(",", ""))
-                            if price_val > 0:
-                                # 補償評分 (因為 Regex 抓不到評分元件，所以回頭查)
+                            price_str = match.group(2).replace(",", "")
+                            price_val = int(price_str)
+                            if 500 < price_val < 10000: # 合理價格區間過濾，防止抓到編號
                                 rating = get_google_rating(driver, target)
                                 found_hotels.append({
                                     "name": target, "price": price_val, "rating": rating,
-                                    "source": "Agoda/Google", "url": target_url
+                                    "source": "Agoda/Booking", "url": target_url
                                 })
-                                current_state_keys.add(f"{target}-Regex-{price_val}")
+                                current_state_keys.add(f"{target}-Auto-{price_val}")
                                 processed_names.add(target)
-                    except: pass
+                    except Exception as re_e:
+                        pass
 
     except Exception as e:
         print(f"資料抓取發生錯誤: {e}")
