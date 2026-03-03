@@ -55,6 +55,35 @@
         margin-top: 2px;
       }
 
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        .results-table th, .results-table td {
+            text-align: left;
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .results-table th {
+            color: #94a3b8;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+        }
+
+        .hotel-name { font-weight: 600; color: white; }
+        .hotel-price { color: var(--accent); font-weight: bold; }
+        
+        @media (max-width: 600px) {
+            .results-table { font-size: 0.75rem; }
+            .results-table th, .results-table td { padding: 6px 2px; }
+        }
+
       .card {
         background: var(--card);
         border-radius: 8px;
@@ -167,7 +196,18 @@
       <div class="card">
         <h3>最新掃描結果</h3>
         <div id="updateTime" class="update-time">讀取中...</div>
-        <div id="resultsList"></div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th style="width: 45%">飯店名稱</th>
+              <th style="width: 15%">價格</th>
+              <th style="width: 15%">來源</th>
+              <th style="width: 12%">星級</th>
+              <th style="width: 13%">預訂</th>
+            </tr>
+          </thead>
+          <tbody id="resultsList"></tbody>
+        </table>
       </div>
 
       <div class="card">
@@ -194,7 +234,8 @@ ML Hotel 晨光飯店
 碰碰諸羅山
 嘉宮旅社
 永悅商務大飯店
-Summertime Inn 夏天旅宿</textarea
+Summertime Inn 夏天旅宿
+卓家小苑</textarea
         >
 
         <label>排除黑名單 (每行一間)</label>
@@ -282,15 +323,16 @@ LIGHT HOSTEL
           list.innerHTML = "";
 
           if (data.hotels && data.hotels.length > 0) {
-            data.hotels.forEach((h) => {
-              const div = document.createElement("div");
-              div.className = "hotel-item";
-              div.innerHTML = `
-                        <div class="hotel-name">${h.name}</div>
-                        <div class="hotel-meta"><span>價格: $${h.price}</span><span>星級: ${h.rating}</span></div>
-                        <a href="${h.url}" class="hotel-link" target="_blank">查看房源</a>
-                    `;
-              list.appendChild(div);
+            data.hotels.forEach((hotel) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                    <td class="hotel-name">${hotel.name}</td>
+                    <td class="hotel-price">$${hotel.price}</td>
+                    <td><span class="status-badge" style="background:rgba(255,255,255,0.05); color:var(--accent); font-size:0.6rem; padding:2px 6px;">${hotel.source || "Google"}</span></td>
+                    <td>${hotel.rating} ★</td>
+                    <td><a href="${hotel.url}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">查看</a></td>
+                  `;
+              list.appendChild(row);
             });
           }
         } catch (e) {

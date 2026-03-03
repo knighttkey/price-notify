@@ -19,7 +19,7 @@ def load_config():
         "HOTELS_TO_WATCH": [
             "大林成都旅社", "仁義湖岸大酒店", "仁義潭溫馨民宿", "嘉義市 偶然行旅",
             "島宇居行藝文旅", "嘉義 慢漫民宿", "ML Hotel 晨光飯店", "碰碰諸羅山",
-            "嘉宮旅社", "永悅商務大飯店", "Summertime Inn 夏天旅宿"
+            "嘉宮旅社", "永悅商務大飯店", "Summertime Inn 夏天旅宿", "卓家小苑"
         ],
         "BLACKLIST": [
             "金龍海悅飯店", "仲青行旅嘉義館", "LIGHT HOSTEL", "風箏旅人旅社"
@@ -91,23 +91,21 @@ def get_hotel_data():
     current_state_keys = set()
     processed_names = set()
 
-    # 定義要搜尋的所有關鍵字 (一個泛用 + 所有指定名單)
-    search_queries = [f"嘉義 雙人房 住宿 {CHECK_IN} {CHECK_OUT}"]
+    # 定義要搜尋的所有關鍵字 (包含民宿分類與指定名單)
+    search_queries = [
+        f"嘉義 飯店 住宿 {CHECK_IN} {CHECK_OUT}",
+        f"嘉義 民宿 住宿 {CHECK_IN} {CHECK_OUT}"
+    ]
     for hotel in HOTELS_TO_WATCH:
-        search_queries.append(f"{hotel} 雙人房 {CHECK_IN} {CHECK_OUT}")
+        search_queries.append(f"{hotel} {CHECK_IN} {CHECK_OUT}")
 
     try:
         for query in search_queries:
             target_url = f"https://www.google.com/travel/search?q={query}"
             driver.get(target_url)
-            time.sleep(4) # 等待 JavaScript 載入
+            time.sleep(4)
             
             items = driver.find_elements(By.CSS_SELECTOR, "div[role='listitem']")
-            
-            # 針對特定飯店搜尋，可能直接跳轉到該飯店的專屬頁面而非列表
-            # 這裡我們只抓取列表呈現的資料，如果 Google 自動跳轉單一飯店頁面，
-            # 可以擷取 h1 作為飯店名稱，並找價格。為了簡化與穩定，我們嘗試統一用 listitem 抓取。
-            # 大部分情況給定日期還是會出現在列表第一項。
             
             for item in items:
                 try:
@@ -115,29 +113,49 @@ def get_hotel_data():
                     if not name or name in processed_names:
                         continue
                         
-                    # 0. 黑名單過濾
                     if any(b in name for b in BLACKLIST):
                         continue
 
-                    # 1. 抓取價格
-                    price_element = item.find_element(By.CSS_SELECTOR, "span[aria-label*='元']")
-                    price_val = int(''.join(filter(str.isdigit, price_element.text)))
-
-                    # 2. 抓取評分
+                    # 1. 抓取價格與來源
+                    price_val = 0
+                    source = "Google"
+                    
                     try:
-                        rating_element = item.find_element(By.CSS_SELECTOR, "span[aria-label*='顆星']")
-                        rating_val = float(rating_element.get_attribute("aria-label").split(" ")[0])
+                        # 優先尋找包含「元」的元素 (通常是價格)
+                        price_element = item.find_element(By.CSS_SELECTOR, "span[aria-label*='元']")
+                        full_label = price_element.get_attribute("aria-label") or ""
+                        price_val = int(''.join(filter(str.isdigit, price_element.text)))
+                        
+                        # 從 aria-label 判定來源
+                        if "Agoda" in full_label: source = "Agoda"
+                        elif "Booking" in full_label or "繽客" in full_label: source = "Booking.com"
+                        elif "Trip.com" in full_label: source = "Trip.com"
+                        elif "Expedia" in full_label: source = "Expedia"
+                        elif " Hotels.com" in full_label: source = "Hotels.com"
+                    except:
+                        # 備案：如果找不到帶「元」的，找任何看起來像價格的數字
+                        try:
+                            price_element = item.find_element(By.XPATH, ".//*[contains(text(), '$')]")
+                            price_val = int(''.join(filter(str.isdigit, price_element.text)))
+                        except:
+                            continue
+
+                    # 2. 抓取評分 (強制抓取 Google Maps 的評分)
+                    try:
+                        # Google 評分通常在 aria-label 包含「顆星」或「stars」的元素
+                        rating_element = item.find_element(By.CSS_SELECTOR, "[aria-label*='星'], [aria-label*='star']")
+                        rating_text = rating_element.get_attribute("aria-label")
+                        rating_val = float(rating_text.split(" ")[0])
                     except:
                         rating_val = 0.0
 
-                    # 3. 抓取跳轉網址
+                    # 3. 抓取網址
                     try:
                         link_element = item.find_element(By.TAG_NAME, "a")
                         hotel_url = link_element.get_attribute("href")
                     except:
                         hotel_url = target_url 
 
-                    # 判定邏輯
                     is_in_list = any(target in name for target in HOTELS_TO_WATCH)
                     is_recommended = (price_val <= MAX_PRICE and rating_val >= MIN_RATING)
                     
@@ -146,12 +164,13 @@ def get_hotel_data():
                             "name": name,
                             "price": price_val,
                             "rating": rating_val,
+                            "source": source,
                             "url": hotel_url
                         }
                         found_hotels.append(hotel_data)
                         current_state_keys.add(f"{name}-{price_val}")
                         processed_names.add(name)
-                except Exception as e:
+                except:
                     continue
     except Exception as e:
         print(f"爬蟲發生錯誤: {e}")
